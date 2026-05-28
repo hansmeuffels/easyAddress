@@ -167,6 +167,10 @@
     document.getElementById("free-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const query = document.getElementById("free-query").value.trim();
+      if (!query) {
+        renderError("Vul een zoekopdracht in.");
+        return;
+      }
       const params = new URLSearchParams({
         q: query,
         rows: "10",
