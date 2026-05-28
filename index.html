@@ -143,7 +143,8 @@
       try {
         const response = await fetch(`${PDOK_BASE_URL}?${queryParams.toString()}`);
         if (!response.ok) {
-          throw new Error(PDOK_ERROR_MESSAGE);
+          renderError(PDOK_ERROR_MESSAGE);
+          return null;
         }
 
         let data;
@@ -154,12 +155,8 @@
           return null;
         }
         return data.response?.docs || [];
-      } catch (error) {
-        if (error instanceof Error && error.message === PDOK_ERROR_MESSAGE) {
-          renderError(error.message);
-        } else {
-          renderError("Kan PDOK Locatieserver niet bereiken.");
-        }
+      } catch {
+        renderError("Kan PDOK Locatieserver niet bereiken.");
         return null;
       }
     }
