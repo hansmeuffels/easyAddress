@@ -112,7 +112,10 @@
 
     function renderResults(docs) {
       if (!docs || docs.length === 0) {
-        resultContent.innerHTML = "<p>Geen adressen gevonden.</p>";
+        resultContent.innerHTML = "";
+        const paragraph = document.createElement("p");
+        paragraph.textContent = "Geen adressen gevonden.";
+        resultContent.appendChild(paragraph);
         return;
       }
 
@@ -143,7 +146,13 @@
           throw new Error(PDOK_ERROR_MESSAGE);
         }
 
-        const data = await response.json();
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          renderError("Ongeldig antwoord van PDOK Locatieserver.");
+          return null;
+        }
         return data.response?.docs || [];
       } catch (error) {
         if (error instanceof Error && error.message === PDOK_ERROR_MESSAGE) {
