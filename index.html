@@ -70,7 +70,7 @@
     }
 
     .card,
-    #results {
+    .results-panel {
       background: var(--surface);
       border: 1px solid rgba(183, 198, 218, 0.7);
       border-radius: var(--radius);
@@ -82,7 +82,7 @@
     }
 
     .card h2,
-    #results h2 {
+    .results-panel h2 {
       margin: 0 0 8px;
       font-size: 1.35rem;
     }
@@ -199,8 +199,23 @@
       font-weight: 600;
     }
 
-    #results {
+    .timing {
+      margin: -8px 0 0;
+      color: var(--primary);
+      font-size: 0.9rem;
+      font-weight: 600;
+      min-height: 20px;
+    }
+
+    .results-grid {
+      display: grid;
+      gap: 24px;
       margin-top: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      align-items: start;
+    }
+
+    .results-panel {
       padding: 24px;
     }
 
@@ -243,7 +258,7 @@
 
       .hero,
       .card,
-      #results {
+      .results-panel {
         padding: 20px;
         border-radius: 20px;
       }
@@ -254,7 +269,7 @@
   <main class="page">
     <section class="hero">
       <h1>Adres zoeken met PDOK</h1>
-      <p>Zoek direct op straat + plaats of met postcode en huisnummer. Beide formulieren starten automatisch zodra de invoer geldig is, zonder extra zoekknop.</p>
+      <p>Zoek direct op straat + plaats, met postcode en huisnummer of via de suggest API. Elk formulier heeft nu een eigen resultaatvak en toont de responsetijd van de API.</p>
     </section>
 
     <section class="layout">
@@ -269,6 +284,7 @@
               <input id="free-query" name="free-query" type="text" autocomplete="off" placeholder="Bijv. Linge 91" aria-describedby="free-status" aria-autocomplete="list" aria-controls="free-suggestions" />
               <p class="field-hint">Voorbeeld: straatnaam + huisnummer of volledig adres.</p>
               <p id="free-status" class="status" role="status" aria-live="polite">Begin met typen om adressen te zoeken.</p>
+              <p id="free-timing" class="timing" aria-live="polite"></p>
               <ul id="free-suggestions" class="autocomplete-list" hidden></ul>
             </div>
           </div>
@@ -292,63 +308,114 @@
               </div>
             </div>
             <p id="postcode-status" class="status" role="status" aria-live="polite">Vul postcode en huisnummer in.</p>
+            <p id="postcode-timing" class="timing" aria-live="polite"></p>
+          </div>
+        </form>
+      </article>
+
+      <article class="card">
+        <form id="suggest-form" novalidate>
+          <h2>Formulier 3: Suggest API</h2>
+          <p class="helper-text">Werkt vergelijkbaar met formulier 1, maar gebruikt de PDOK suggest API en toont de ruwe suggestieresultaten.</p>
+
+          <div class="stack">
+            <div class="field autocomplete">
+              <label for="suggest-query">Zoekopdracht</label>
+              <input id="suggest-query" name="suggest-query" type="text" autocomplete="off" placeholder="Bijv. bloem 28 tilburg" aria-describedby="suggest-status" aria-autocomplete="list" aria-controls="suggest-suggestions" />
+              <p class="field-hint">Voorbeeld: bloem 28 tilburg</p>
+              <p id="suggest-status" class="status" role="status" aria-live="polite">Begin met typen om suggesties op te halen.</p>
+              <p id="suggest-timing" class="timing" aria-live="polite"></p>
+              <ul id="suggest-suggestions" class="autocomplete-list" hidden></ul>
+            </div>
           </div>
         </form>
       </article>
     </section>
 
-    <section id="results" aria-live="polite">
-      <h2>Resultaten</h2>
-      <div id="result-content">
-        <p class="result-placeholder">Nog geen zoekopdracht uitgevoerd.</p>
-      </div>
+    <section class="results-grid" aria-live="polite">
+      <section class="results-panel">
+        <h2>Resultaat Formulier 1</h2>
+        <div id="free-result-content">
+          <p class="result-placeholder">Nog geen zoekopdracht uitgevoerd.</p>
+        </div>
+      </section>
+
+      <section class="results-panel">
+        <h2>Resultaat Formulier 2</h2>
+        <div id="postcode-result-content">
+          <p class="result-placeholder">Nog geen zoekopdracht uitgevoerd.</p>
+        </div>
+      </section>
+
+      <section class="results-panel">
+        <h2>Resultaat Formulier 3</h2>
+        <div id="suggest-result-content">
+          <p class="result-placeholder">Nog geen zoekopdracht uitgevoerd.</p>
+        </div>
+      </section>
     </section>
   </main>
 
   <script>
-    const PDOK_BASE_URL = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free";
-    const resultContent = document.getElementById("result-content");
+    const PDOK_FREE_URL = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free";
+    const PDOK_SUGGEST_URL = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/suggest";
+
+    const freeResultContent = document.getElementById("free-result-content");
+    const postcodeResultContent = document.getElementById("postcode-result-content");
+    const suggestResultContent = document.getElementById("suggest-result-content");
+
     const freeQueryInput = document.getElementById("free-query");
     const freeStatus = document.getElementById("free-status");
+    const freeTiming = document.getElementById("free-timing");
     const freeSuggestions = document.getElementById("free-suggestions");
+
     const postcodeInput = document.getElementById("postcode");
     const houseNumberInput = document.getElementById("house-number");
     const postcodeStatus = document.getElementById("postcode-status");
+    const postcodeTiming = document.getElementById("postcode-timing");
 
-    let freeSearchTimeout;
-    let postcodeSearchTimeout;
+    const suggestQueryInput = document.getElementById("suggest-query");
+    const suggestStatus = document.getElementById("suggest-status");
+    const suggestTiming = document.getElementById("suggest-timing");
+    const suggestSuggestions = document.getElementById("suggest-suggestions");
+
     let lastFreeSearchToken = 0;
     let lastPostcodeSearchToken = 0;
+    let lastSuggestSearchToken = 0;
 
     function setStatus(element, message, type = "") {
       element.className = `status${type ? ` ${type}` : ""}`;
       element.textContent = message;
     }
 
-    function renderPlaceholder(message) {
-      resultContent.innerHTML = "";
+    function setTiming(element, duration) {
+      element.textContent = typeof duration === "number" ? `API responsetijd: ${duration.toFixed(0)} ms` : "";
+    }
+
+    function renderPlaceholder(container, message) {
+      container.innerHTML = "";
       const paragraph = document.createElement("p");
       paragraph.className = "result-placeholder";
       paragraph.textContent = message;
-      resultContent.appendChild(paragraph);
+      container.appendChild(paragraph);
     }
 
-    function renderError(message) {
-      resultContent.innerHTML = "";
+    function renderError(container, message) {
+      container.innerHTML = "";
       const paragraph = document.createElement("p");
       paragraph.className = "status error";
       paragraph.textContent = message;
-      resultContent.appendChild(paragraph);
+      container.appendChild(paragraph);
     }
 
-    function renderResults(docs) {
-      resultContent.innerHTML = "";
+    function renderResults(container, docs) {
+      container.innerHTML = "";
 
       if (!docs || docs.length === 0) {
         const emptyState = document.createElement("p");
         emptyState.className = "empty-state";
         emptyState.textContent = "Geen adressen gevonden.";
-        resultContent.appendChild(emptyState);
+        container.appendChild(emptyState);
         return;
       }
 
@@ -360,7 +427,7 @@
         item.className = "result-item";
 
         const title = document.createElement("strong");
-        title.textContent = doc.weergavenaam || "Adres zonder naam";
+        title.textContent = doc.weergavenaam || doc.id || "Adres zonder naam";
         item.appendChild(title);
 
         const meta = [];
@@ -368,6 +435,9 @@
         if (doc.huisnummer) meta.push(doc.huisnummer);
         if (doc.postcode) meta.push(doc.postcode);
         if (doc.woonplaatsnaam) meta.push(doc.woonplaatsnaam);
+        if (doc.type) meta.push(`type: ${doc.type}`);
+        if (doc.score !== undefined) meta.push(`score: ${doc.score}`);
+        if (doc.adrestype) meta.push(`adrestype: ${doc.adrestype}`);
 
         if (meta.length > 0) {
           const details = document.createElement("div");
@@ -379,14 +449,14 @@
         list.appendChild(item);
       });
 
-      resultContent.appendChild(list);
+      container.appendChild(list);
     }
 
-    function renderSuggestions(docs) {
-      freeSuggestions.innerHTML = "";
+    function renderAutocomplete(listElement, docs, onSelect) {
+      listElement.innerHTML = "";
 
       if (!docs || docs.length === 0) {
-        freeSuggestions.hidden = true;
+        listElement.hidden = true;
         return;
       }
 
@@ -395,18 +465,13 @@
         const button = document.createElement("button");
         button.type = "button";
         button.className = "autocomplete-item";
-        button.textContent = doc.weergavenaam || "Adres zonder naam";
-        button.addEventListener("click", () => {
-          freeQueryInput.value = doc.weergavenaam || "";
-          freeSuggestions.hidden = true;
-          renderResults([doc]);
-          setStatus(freeStatus, "Adres geselecteerd.");
-        });
+        button.textContent = doc.weergavenaam || doc.id || "Adres zonder naam";
+        button.addEventListener("click", () => onSelect(doc));
         listItem.appendChild(button);
-        freeSuggestions.appendChild(listItem);
+        listElement.appendChild(listItem);
       });
 
-      freeSuggestions.hidden = false;
+      listElement.hidden = false;
     }
 
     function normalizePostcode(value) {
@@ -417,17 +482,24 @@
       return value.trim();
     }
 
-    async function searchPdok(queryParams) {
+    async function searchPdok(baseUrl, queryParams, resultContainer) {
+      const startTime = performance.now();
+
       try {
-        const response = await fetch(`${PDOK_BASE_URL}?${queryParams.toString()}`);
+        const response = await fetch(`${baseUrl}?${queryParams.toString()}`);
+        const duration = performance.now() - startTime;
+
         if (!response.ok) {
           throw new Error(`PDOK gaf status ${response.status}`);
         }
 
         const data = await response.json();
-        return data.response?.docs || [];
+        return {
+          docs: data.response?.docs || [],
+          duration
+        };
       } catch {
-        renderError("De PDOK service is tijdelijk niet bereikbaar of gaf een fout terug.");
+        renderError(resultContainer, "De PDOK service is tijdelijk niet bereikbaar of gaf een fout terug.");
         return null;
       }
     }
@@ -438,11 +510,13 @@
 
       if (query.length < 3) {
         freeSuggestions.hidden = true;
+        setTiming(freeTiming, null);
         if (!query) {
           setStatus(freeStatus, "Begin met typen om adressen te zoeken.");
-          renderPlaceholder("Nog geen zoekopdracht uitgevoerd.");
+          renderPlaceholder(freeResultContent, "Nog geen zoekopdracht uitgevoerd.");
         } else {
           setStatus(freeStatus, "Typ minimaal 3 tekens voor suggesties.");
+          renderPlaceholder(freeResultContent, "Wacht tot er minimaal 3 tekens zijn ingevuld.");
         }
         return;
       }
@@ -451,18 +525,24 @@
       const params = new URLSearchParams({ q: query, rows: "8" });
       params.append("fq", "type:(adres)");
 
-      const docs = await searchPdok(params);
-      if (searchToken !== lastFreeSearchToken || docs === null) {
+      const result = await searchPdok(PDOK_FREE_URL, params, freeResultContent);
+      if (searchToken !== lastFreeSearchToken || result === null) {
         return;
       }
 
-      renderSuggestions(docs);
-      renderResults(docs);
+      renderAutocomplete(freeSuggestions, result.docs, (doc) => {
+        freeQueryInput.value = doc.weergavenaam || "";
+        freeSuggestions.hidden = true;
+        renderResults(freeResultContent, [doc]);
+        setStatus(freeStatus, "Adres geselecteerd.");
+      });
+      renderResults(freeResultContent, result.docs);
+      setTiming(freeTiming, result.duration);
 
-      if (docs.length === 0) {
+      if (result.docs.length === 0) {
         setStatus(freeStatus, "Geen suggesties gevonden.");
       } else {
-        setStatus(freeStatus, `${docs.length} suggestie${docs.length === 1 ? "" : "s"} gevonden.`);
+        setStatus(freeStatus, `${result.docs.length} suggestie${result.docs.length === 1 ? "" : "s"} gevonden.`);
       }
     }
 
@@ -475,16 +555,22 @@
 
       if (!postcode && !houseNumber) {
         setStatus(postcodeStatus, "Vul postcode en huisnummer in.");
+        setTiming(postcodeTiming, null);
+        renderPlaceholder(postcodeResultContent, "Nog geen zoekopdracht uitgevoerd.");
         return;
       }
 
       if (!/^\d{4}[A-Z]{2}$/.test(postcode)) {
         setStatus(postcodeStatus, "Gebruik een geldige postcode, bijvoorbeeld 1234AB.", "error");
+        setTiming(postcodeTiming, null);
+        renderPlaceholder(postcodeResultContent, "Wacht op een geldige postcode.");
         return;
       }
 
       if (!/^\d+[a-zA-Z]?$/.test(houseNumber)) {
         setStatus(postcodeStatus, "Gebruik een geldig huisnummer.", "error");
+        setTiming(postcodeTiming, null);
+        renderPlaceholder(postcodeResultContent, "Wacht op een geldig huisnummer.");
         return;
       }
 
@@ -493,16 +579,64 @@
       params.append("fq", `postcode:${postcode}`);
       params.append("fq", `huisnummer:${houseNumber}`);
 
-      const docs = await searchPdok(params);
-      if (searchToken !== lastPostcodeSearchToken || docs === null) {
+      const result = await searchPdok(PDOK_FREE_URL, params, postcodeResultContent);
+      if (searchToken !== lastPostcodeSearchToken || result === null) {
         return;
       }
 
-      renderResults(docs);
-      if (docs.length === 0) {
+      renderResults(postcodeResultContent, result.docs);
+      setTiming(postcodeTiming, result.duration);
+
+      if (result.docs.length === 0) {
         setStatus(postcodeStatus, "Geen adres gevonden voor deze combinatie.");
       } else {
-        setStatus(postcodeStatus, `${docs.length} adres${docs.length === 1 ? "" : "sen"} gevonden.`);
+        setStatus(postcodeStatus, `${result.docs.length} adres${result.docs.length === 1 ? "" : "sen"} gevonden.`);
+      }
+    }
+
+    async function runSuggestSearch() {
+      const query = suggestQueryInput.value.trim();
+      const searchToken = ++lastSuggestSearchToken;
+
+      if (query.length < 3) {
+        suggestSuggestions.hidden = true;
+        setTiming(suggestTiming, null);
+        if (!query) {
+          setStatus(suggestStatus, "Begin met typen om suggesties op te halen.");
+          renderPlaceholder(suggestResultContent, "Nog geen zoekopdracht uitgevoerd.");
+        } else {
+          setStatus(suggestStatus, "Typ minimaal 3 tekens voor suggesties.");
+          renderPlaceholder(suggestResultContent, "Wacht tot er minimaal 3 tekens zijn ingevuld.");
+        }
+        return;
+      }
+
+      setStatus(suggestStatus, "Suggesties ophalen...", "loading");
+      const params = new URLSearchParams({
+        q: query,
+        fl: "id weergavenaam type score adrestype",
+        qf: "exacte_match^1 suggest^0.5 huisnummer^0.5 huisletter^0.5 huisnummertoevoeging^0.5"
+      });
+      params.append("fq", "type:(adres)");
+
+      const result = await searchPdok(PDOK_SUGGEST_URL, params, suggestResultContent);
+      if (searchToken !== lastSuggestSearchToken || result === null) {
+        return;
+      }
+
+      renderAutocomplete(suggestSuggestions, result.docs, (doc) => {
+        suggestQueryInput.value = doc.weergavenaam || "";
+        suggestSuggestions.hidden = true;
+        renderResults(suggestResultContent, [doc]);
+        setStatus(suggestStatus, "Suggestie geselecteerd.");
+      });
+      renderResults(suggestResultContent, result.docs);
+      setTiming(suggestTiming, result.duration);
+
+      if (result.docs.length === 0) {
+        setStatus(suggestStatus, "Geen suggesties gevonden.");
+      } else {
+        setStatus(suggestStatus, `${result.docs.length} suggestie${result.docs.length === 1 ? "" : "s"} gevonden.`);
       }
     }
 
@@ -513,6 +647,7 @@
 
     const freeTimer = { value: null };
     const postcodeTimer = { value: null };
+    const suggestTimer = { value: null };
 
     freeQueryInput.addEventListener("input", () => {
       debounce(runFreeSearch, 350, freeTimer);
@@ -550,6 +685,28 @@
 
     houseNumberInput.addEventListener("paste", () => {
       requestAnimationFrame(() => debounce(runPostcodeSearch, 0, postcodeTimer));
+    });
+
+    suggestQueryInput.addEventListener("input", () => {
+      debounce(runSuggestSearch, 350, suggestTimer);
+    });
+
+    suggestQueryInput.addEventListener("paste", () => {
+      requestAnimationFrame(() => {
+        debounce(runSuggestSearch, 0, suggestTimer);
+      });
+    });
+
+    suggestQueryInput.addEventListener("blur", () => {
+      window.setTimeout(() => {
+        suggestSuggestions.hidden = true;
+      }, 150);
+    });
+
+    suggestQueryInput.addEventListener("focus", () => {
+      if (suggestSuggestions.children.length > 0) {
+        suggestSuggestions.hidden = false;
+      }
     });
   </script>
 </body>
