@@ -99,6 +99,7 @@
 
   <script>
     const PDOK_BASE_URL = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/select";
+    const PDOK_ERROR_MESSAGE = "PDOK service gaf een fout terug.";
     const resultContent = document.getElementById("result-content");
 
     function renderError(message) {
@@ -131,13 +132,13 @@
       try {
         const response = await fetch(`${PDOK_BASE_URL}?${queryParams.toString()}`);
         if (!response.ok) {
-          throw new Error("PDOK service gaf een fout terug.");
+          throw new Error(PDOK_ERROR_MESSAGE);
         }
 
         const data = await response.json();
         return data.response?.docs || [];
       } catch (error) {
-        if (error instanceof Error && error.message === "PDOK service gaf een fout terug.") {
+        if (error instanceof Error && error.message === PDOK_ERROR_MESSAGE) {
           renderError(error.message);
         } else {
           renderError("Kan PDOK Locatieserver niet bereiken.");
