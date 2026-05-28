@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>easyAddress</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.4;
+      margin: 2rem auto;
+      max-width: 840px;
+      padding: 0 1rem;
+    }
+
+    form {
+      border: 1px solid #d8d8d8;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      padding: 1rem;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 0.25rem;
+    }
+
+    input {
+      border: 1px solid #b9b9b9;
+      border-radius: 4px;
+      padding: 0.5rem;
+    }
+
+    button {
+      border: 1px solid #4c4c4c;
+      border-radius: 4px;
+      cursor: pointer;
+      padding: 0.5rem 0.75rem;
+    }
+
+    #results {
+      border-top: 1px solid #e5e5e5;
+      margin-top: 1rem;
+      padding-top: 1rem;
+    }
+
+    .error {
+      color: #9f1d1d;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Adres opzoeken</h1>
+  <p>Kies één van de twee manieren om een adres te zoeken via PDOK Locatieserver.</p>
+
+  <form id="free-form">
+    <h2>Formulier 1: Vrij invoerveld</h2>
+    <div class="row">
+      <div>
+        <label for="free-query">Zoekopdracht</label>
+        <input id="free-query" name="free-query" type="text" required placeholder="Bijv. Dam 1 Amsterdam" />
+      </div>
+      <div style="align-self: end;">
+        <button type="submit">Zoek adres</button>
+      </div>
+    </div>
+  </form>
+
+  <form id="postcode-form">
+    <h2>Formulier 2: Postcode + huisnummer</h2>
+    <div class="row">
+      <div>
+        <label for="postcode">Postcode</label>
+        <input id="postcode" name="postcode" type="text" inputmode="text" required placeholder="1234AB" />
+      </div>
+      <div>
+        <label for="house-number">Huisnummer</label>
+        <input id="house-number" name="house-number" type="text" inputmode="numeric" required placeholder="10" />
+      </div>
+      <div style="align-self: end;">
+        <button type="submit">Zoek adres</button>
+      </div>
+    </div>
+  </form>
+
+  <section id="results" aria-live="polite">
+    <h2>Resultaten</h2>
+    <div id="result-content">Nog geen zoekopdracht uitgevoerd.</div>
+  </section>
+
+  <script>
+    const PDOK_BASE_URL = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/select";
+    const resultContent = document.getElementById("result-content");
+
+    function renderError(message) {
+      resultContent.innerHTML = "";
+      const paragraph = document.createElement("p");
+      paragraph.className = "error";
+      paragraph.textContent = message;
+      resultContent.appendChild(paragraph);
+    }
+
+    function renderResults(docs) {
+      if (!docs || docs.length === 0) {
+        resultContent.innerHTML = "<p>Geen adressen gevonden.</p>";
+        return;
+      }
+
+      const list = document.createElement("ol");
+
+      docs.forEach((doc) => {
+        const item = document.createElement("li");
+        item.textContent = doc.weergavenaam || doc.id;
+        list.appendChild(item);
+      });
+
+      resultContent.innerHTML = "";
+      resultContent.appendChild(list);
+    }
+
+    async function searchPdok(queryParams) {
+      try {
+        const response = await fetch(`${PDOK_BASE_URL}?${queryParams.toString()}`);
+        if (!response.ok) {
+          throw new Error("PDOK service gaf een fout terug.");
+        }
+
+        const data = await response.json();
+        return data.response?.docs || [];
+      } catch (error) {
+        if (error instanceof Error && error.message === "PDOK service gaf een fout terug.") {
+          renderError(error.message);
+        } else {
+          renderError("Kan PDOK Locatieserver niet bereiken.");
+        }
+        return null;
+      }
+    }
+
+    document.getElementById("free-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const query = document.getElementById("free-query").value.trim();
+      const params = new URLSearchParams({
+        q: query,
+        rows: "10",
+        fq: "type:adres"
+      });
+
+      const docs = await searchPdok(params);
+      if (docs) {
+        renderResults(docs);
+      }
+    });
+
+    document.getElementById("postcode-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const postcode = document.getElementById("postcode").value.replace(/\s+/g, "").toUpperCase();
+      const houseNumber = document.getElementById("house-number").value.trim();
+
+      if (!postcode || !houseNumber) {
+        renderError("Vul postcode en huisnummer in.");
+        return;
+      }
+
+      const params = new URLSearchParams({
+        q: "*:*",
+        rows: "10"
+      });
+      params.append("fq", "type:adres");
+      params.append("fq", `postcode:${postcode}`);
+      params.append("fq", `huisnummer:${houseNumber}`);
+
+      const docs = await searchPdok(params);
+      if (docs) {
+        renderResults(docs);
+      }
+    });
+  </script>
+</body>
+</html>
