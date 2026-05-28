@@ -128,6 +128,14 @@
       resultContent.appendChild(list);
     }
 
+    function normalizePostcode(value) {
+      return value.replace(/\s+/g, "").toUpperCase();
+    }
+
+    function normalizeHouseNumber(value) {
+      return value.trim();
+    }
+
     async function searchPdok(queryParams) {
       try {
         const response = await fetch(`${PDOK_BASE_URL}?${queryParams.toString()}`);
@@ -164,8 +172,8 @@
 
     document.getElementById("postcode-form").addEventListener("submit", async (event) => {
       event.preventDefault();
-      const postcode = document.getElementById("postcode").value.replace(/\s+/g, "").toUpperCase();
-      const houseNumber = document.getElementById("house-number").value.trim();
+      const postcode = normalizePostcode(document.getElementById("postcode").value);
+      const houseNumber = normalizeHouseNumber(document.getElementById("house-number").value);
 
       if (!postcode || !houseNumber) {
         renderError("Vul postcode en huisnummer in.");
