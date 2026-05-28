@@ -4,6 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>easyAddress</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
   <style>
     :root {
       --page-background: #f4f7fb;
@@ -69,20 +75,15 @@
       align-items: start;
     }
 
-    .card,
-    .results-panel {
+    .card {
       background: var(--surface);
       border: 1px solid rgba(183, 198, 218, 0.7);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-    }
-
-    .card {
       padding: 24px;
     }
 
-    .card h2,
-    .results-panel h2 {
+    .card h2 {
       margin: 0 0 8px;
       font-size: 1.35rem;
     }
@@ -207,18 +208,6 @@
       min-height: 20px;
     }
 
-    .results-grid {
-      display: grid;
-      gap: 24px;
-      margin-top: 24px;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      align-items: start;
-    }
-
-    .results-panel {
-      padding: 24px;
-    }
-
     .result-placeholder,
     .empty-state {
       margin: 0;
@@ -251,16 +240,43 @@
       font-size: 0.92rem;
     }
 
+    .map-panel {
+      margin-top: 18px;
+      border-top: 1px solid var(--border);
+      padding-top: 18px;
+    }
+
+    .map-panel[hidden] {
+      display: none;
+    }
+
+    .map-canvas {
+      height: 280px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #e8eef8;
+    }
+
+    .map-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
     @media (max-width: 720px) {
       body {
         padding-top: 20px;
       }
 
       .hero,
-      .card,
-      .results-panel {
+      .card {
         padding: 20px;
         border-radius: 20px;
+      }
+
+      .map-canvas {
+        height: 240px;
       }
     }
   </style>
@@ -269,7 +285,7 @@
   <main class="page">
     <section class="hero">
       <h1>Adres zoeken met PDOK</h1>
-      <p>Zoek direct op straat + plaats, met postcode en huisnummer of via de suggest API. Elk formulier heeft nu een eigen resultaatvak en toont de responsetijd van de API.</p>
+      <p>Zoek direct op straat + plaats, met postcode en huisnummer of via de suggest API. Invoer en resultaten zijn nu per formulier gecombineerd. Bij precies één resultaat wordt het adres ook op een kaart getoond.</p>
     </section>
 
     <section class="layout">
@@ -287,6 +303,15 @@
               <p id="free-timing" class="timing" aria-live="polite"></p>
               <ul id="free-suggestions" class="autocomplete-list" hidden></ul>
             </div>
+
+            <div id="free-result-content">
+              <p class="result-placeholder">Nog geen zoekopdracht uitgevoerd.</p>
+            </div>
+
+            <section id="free-map-panel" class="map-panel" hidden>
+              <p class="map-note">Kaartweergave van het gevonden adres.</p>
+              <div id="free-map" class="map-canvas" aria-label="Kaart van gevonden adres"></div>
+            </section>
           </div>
         </form>
       </article>
@@ -309,6 +334,15 @@
             </div>
             <p id="postcode-status" class="status" role="status" aria-live="polite">Vul postcode en huisnummer in.</p>
             <p id="postcode-timing" class="timing" aria-live="polite"></p>
+
+            <div id="postcode-result-content">
+              <p class="result-placeholder">Nog geen zoekopdracht uitgevoerd.</p>
+            </div>
+
+            <section id="postcode-map-panel" class="map-panel" hidden>
+              <p class="map-note">Kaartweergave van het gevonden adres.</p>
+              <div id="postcode-map" class="map-canvas" aria-label="Kaart van gevonden adres"></div>
+            </section>
           </div>
         </form>
       </article>
@@ -327,35 +361,26 @@
               <p id="suggest-timing" class="timing" aria-live="polite"></p>
               <ul id="suggest-suggestions" class="autocomplete-list" hidden></ul>
             </div>
+
+            <div id="suggest-result-content">
+              <p class="result-placeholder">Nog geen zoekopdracht uitgevoerd.</p>
+            </div>
+
+            <section id="suggest-map-panel" class="map-panel" hidden>
+              <p class="map-note">Kaartweergave van het gevonden adres.</p>
+              <div id="suggest-map" class="map-canvas" aria-label="Kaart van gevonden adres"></div>
+            </section>
           </div>
         </form>
       </article>
     </section>
-
-    <section class="results-grid" aria-live="polite">
-      <section class="results-panel">
-        <h2>Resultaat Formulier 1</h2>
-        <div id="free-result-content">
-          <p class="result-placeholder">Nog geen zoekopdracht uitgevoerd.</p>
-        </div>
-      </section>
-
-      <section class="results-panel">
-        <h2>Resultaat Formulier 2</h2>
-        <div id="postcode-result-content">
-          <p class="result-placeholder">Nog geen zoekopdracht uitgevoerd.</p>
-        </div>
-      </section>
-
-      <section class="results-panel">
-        <h2>Resultaat Formulier 3</h2>
-        <div id="suggest-result-content">
-          <p class="result-placeholder">Nog geen zoekopdracht uitgevoerd.</p>
-        </div>
-      </section>
-    </section>
   </main>
 
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
   <script>
     const PDOK_FREE_URL = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free";
     const PDOK_SUGGEST_URL = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/suggest";
@@ -363,6 +388,10 @@
     const freeResultContent = document.getElementById("free-result-content");
     const postcodeResultContent = document.getElementById("postcode-result-content");
     const suggestResultContent = document.getElementById("suggest-result-content");
+
+    const freeMapPanel = document.getElementById("free-map-panel");
+    const postcodeMapPanel = document.getElementById("postcode-map-panel");
+    const suggestMapPanel = document.getElementById("suggest-map-panel");
 
     const freeQueryInput = document.getElementById("free-query");
     const freeStatus = document.getElementById("free-status");
@@ -378,6 +407,12 @@
     const suggestStatus = document.getElementById("suggest-status");
     const suggestTiming = document.getElementById("suggest-timing");
     const suggestSuggestions = document.getElementById("suggest-suggestions");
+
+    const mapRegistry = {
+      free: { panel: freeMapPanel, elementId: "free-map", map: null, marker: null },
+      postcode: { panel: postcodeMapPanel, elementId: "postcode-map", map: null, marker: null },
+      suggest: { panel: suggestMapPanel, elementId: "suggest-map", map: null, marker: null }
+    };
 
     let lastFreeSearchToken = 0;
     let lastPostcodeSearchToken = 0;
@@ -408,7 +443,78 @@
       container.appendChild(paragraph);
     }
 
-    function renderResults(container, docs) {
+    function parsePoint(point) {
+      if (!point || typeof point !== "string") {
+        return null;
+      }
+
+      const match = point.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
+      if (!match) {
+        return null;
+      }
+
+      const x = Number(match[1]);
+      const y = Number(match[2]);
+      if (Number.isNaN(x) || Number.isNaN(y)) {
+        return null;
+      }
+
+      const lat = y / 111320;
+      const lng = x / (111320 * Math.cos((lat * Math.PI) / 180));
+      if (Number.isNaN(lat) || Number.isNaN(lng)) {
+        return null;
+      }
+
+      return { lat, lng };
+    }
+
+    function hideMap(mapKey) {
+      const entry = mapRegistry[mapKey];
+      if (!entry) return;
+      entry.panel.hidden = true;
+    }
+
+    function showMap(mapKey, doc) {
+      const entry = mapRegistry[mapKey];
+      if (!entry) return;
+
+      const coordinates = parsePoint(doc.centroide_ll || doc.centroid_ll || doc.centroide_rd || doc.centroid_rd);
+      if (!coordinates) {
+        hideMap(mapKey);
+        return;
+      }
+
+      entry.panel.hidden = false;
+
+      if (!entry.map) {
+        entry.map = L.map(entry.elementId);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "&copy; OpenStreetMap-bijdragers"
+        }).addTo(entry.map);
+      }
+
+      if (!entry.marker) {
+        entry.marker = L.marker([coordinates.lat, coordinates.lng]).addTo(entry.map);
+      } else {
+        entry.marker.setLatLng([coordinates.lat, coordinates.lng]);
+      }
+
+      entry.marker.bindPopup(doc.weergavenaam || "Gevonden adres");
+      entry.map.setView([coordinates.lat, coordinates.lng], 17);
+      window.setTimeout(() => entry.map.invalidateSize(), 0);
+    }
+
+    function updateMapForResults(mapKey, docs) {
+      if (!docs || docs.length !== 1) {
+        hideMap(mapKey);
+        return;
+      }
+
+      showMap(mapKey, docs[0]);
+    }
+
+    function renderResults(container, docs, mapKey) {
       container.innerHTML = "";
 
       if (!docs || docs.length === 0) {
@@ -416,6 +522,7 @@
         emptyState.className = "empty-state";
         emptyState.textContent = "Geen adressen gevonden.";
         container.appendChild(emptyState);
+        hideMap(mapKey);
         return;
       }
 
@@ -450,6 +557,7 @@
       });
 
       container.appendChild(list);
+      updateMapForResults(mapKey, docs);
     }
 
     function renderAutocomplete(listElement, docs, onSelect) {
@@ -511,6 +619,7 @@
       if (query.length < 3) {
         freeSuggestions.hidden = true;
         setTiming(freeTiming, null);
+        hideMap("free");
         if (!query) {
           setStatus(freeStatus, "Begin met typen om adressen te zoeken.");
           renderPlaceholder(freeResultContent, "Nog geen zoekopdracht uitgevoerd.");
@@ -522,7 +631,7 @@
       }
 
       setStatus(freeStatus, "Adressen zoeken...", "loading");
-      const params = new URLSearchParams({ q: query, rows: "8" });
+      const params = new URLSearchParams({ q: query, rows: "8", fl: "id,weergavenaam,type,score,adrestype,straatnaam,huisnummer,postcode,woonplaatsnaam,centroide_ll" });
       params.append("fq", "type:(adres)");
 
       const result = await searchPdok(PDOK_FREE_URL, params, freeResultContent);
@@ -533,10 +642,10 @@
       renderAutocomplete(freeSuggestions, result.docs, (doc) => {
         freeQueryInput.value = doc.weergavenaam || "";
         freeSuggestions.hidden = true;
-        renderResults(freeResultContent, [doc]);
+        renderResults(freeResultContent, [doc], "free");
         setStatus(freeStatus, "Adres geselecteerd.");
       });
-      renderResults(freeResultContent, result.docs);
+      renderResults(freeResultContent, result.docs, "free");
       setTiming(freeTiming, result.duration);
 
       if (result.docs.length === 0) {
@@ -556,6 +665,7 @@
       if (!postcode && !houseNumber) {
         setStatus(postcodeStatus, "Vul postcode en huisnummer in.");
         setTiming(postcodeTiming, null);
+        hideMap("postcode");
         renderPlaceholder(postcodeResultContent, "Nog geen zoekopdracht uitgevoerd.");
         return;
       }
@@ -563,6 +673,7 @@
       if (!/^\d{4}[A-Z]{2}$/.test(postcode)) {
         setStatus(postcodeStatus, "Gebruik een geldige postcode, bijvoorbeeld 1234AB.", "error");
         setTiming(postcodeTiming, null);
+        hideMap("postcode");
         renderPlaceholder(postcodeResultContent, "Wacht op een geldige postcode.");
         return;
       }
@@ -570,12 +681,13 @@
       if (!/^\d+[a-zA-Z]?$/.test(houseNumber)) {
         setStatus(postcodeStatus, "Gebruik een geldig huisnummer.", "error");
         setTiming(postcodeTiming, null);
+        hideMap("postcode");
         renderPlaceholder(postcodeResultContent, "Wacht op een geldig huisnummer.");
         return;
       }
 
       setStatus(postcodeStatus, "Adres zoeken...", "loading");
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ fl: "id,weergavenaam,type,score,adrestype,straatnaam,huisnummer,postcode,woonplaatsnaam,centroide_ll" });
       params.append("fq", `postcode:${postcode}`);
       params.append("fq", `huisnummer:${houseNumber}`);
 
@@ -584,7 +696,7 @@
         return;
       }
 
-      renderResults(postcodeResultContent, result.docs);
+      renderResults(postcodeResultContent, result.docs, "postcode");
       setTiming(postcodeTiming, result.duration);
 
       if (result.docs.length === 0) {
@@ -601,6 +713,7 @@
       if (query.length < 3) {
         suggestSuggestions.hidden = true;
         setTiming(suggestTiming, null);
+        hideMap("suggest");
         if (!query) {
           setStatus(suggestStatus, "Begin met typen om suggesties op te halen.");
           renderPlaceholder(suggestResultContent, "Nog geen zoekopdracht uitgevoerd.");
@@ -614,7 +727,7 @@
       setStatus(suggestStatus, "Suggesties ophalen...", "loading");
       const params = new URLSearchParams({
         q: query,
-        fl: "id weergavenaam type score adrestype",
+        fl: "id,weergavenaam,type,score,adrestype,straatnaam,huisnummer,postcode,woonplaatsnaam,centroide_ll",
         qf: "exacte_match^1 suggest^0.5 huisnummer^0.5 huisletter^0.5 huisnummertoevoeging^0.5"
       });
       params.append("fq", "type:(adres)");
@@ -627,10 +740,10 @@
       renderAutocomplete(suggestSuggestions, result.docs, (doc) => {
         suggestQueryInput.value = doc.weergavenaam || "";
         suggestSuggestions.hidden = true;
-        renderResults(suggestResultContent, [doc]);
+        renderResults(suggestResultContent, [doc], "suggest");
         setStatus(suggestStatus, "Suggestie geselecteerd.");
       });
-      renderResults(suggestResultContent, result.docs);
+      renderResults(suggestResultContent, result.docs, "suggest");
       setTiming(suggestTiming, result.duration);
 
       if (result.docs.length === 0) {
