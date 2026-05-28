@@ -5,130 +5,408 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>easyAddress</title>
   <style>
+    :root {
+      --page-background: #f4f7fb;
+      --surface: #ffffff;
+      --surface-muted: #f8fafc;
+      --border: #d8e1ee;
+      --border-strong: #b7c6da;
+      --primary: #254f8f;
+      --primary-soft: #eef4ff;
+      --text: #162033;
+      --muted: #5f6f86;
+      --danger: #b42318;
+      --shadow: 0 18px 40px rgba(23, 41, 73, 0.08);
+      --radius: 18px;
+      --radius-small: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      line-height: 1.4;
-      margin: 2rem auto;
-      max-width: 840px;
-      padding: 0 1rem;
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(180deg, #f8fbff 0%, var(--page-background) 100%);
+      color: var(--text);
+      font-family: Inter, Arial, sans-serif;
+      line-height: 1.5;
+      padding: 32px 16px 64px;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #13428f 0%, #2a69c7 100%);
+      color: #ffffff;
+      border-radius: 28px;
+      padding: 32px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.1;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 720px;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 1.05rem;
+    }
+
+    .layout {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      align-items: start;
+    }
+
+    .card,
+    #results {
+      background: var(--surface);
+      border: 1px solid rgba(183, 198, 218, 0.7);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .card {
+      padding: 24px;
+    }
+
+    .card h2,
+    #results h2 {
+      margin: 0 0 8px;
+      font-size: 1.35rem;
+    }
+
+    .card p,
+    .helper-text {
+      margin: 0 0 20px;
+      color: var(--muted);
     }
 
     form {
-      border: 1px solid #d8d8d8;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      padding: 1rem;
+      margin: 0;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
     }
 
     .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      position: relative;
     }
 
     label {
-      display: block;
-      font-weight: bold;
-      margin-bottom: 0.25rem;
+      font-weight: 700;
+      font-size: 0.95rem;
     }
 
     input {
-      border: 1px solid #b9b9b9;
-      border-radius: 4px;
-      padding: 0.5rem;
+      width: 100%;
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text);
+      border-radius: 14px;
+      padding: 14px 16px;
+      font: inherit;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
     }
 
-    button {
-      border: 1px solid #4c4c4c;
-      border-radius: 4px;
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(37, 79, 143, 0.14);
+    }
+
+    .field-hint {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin: 0;
+    }
+
+    .autocomplete {
+      position: relative;
+    }
+
+    .autocomplete-list {
+      list-style: none;
+      margin: 10px 0 0;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .autocomplete-list[hidden] {
+      display: none;
+    }
+
+    .autocomplete-item {
+      border: 0;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      border-radius: 12px;
       cursor: pointer;
-      padding: 0.5rem 0.75rem;
+      padding: 12px 14px;
+      color: var(--text);
+      font: inherit;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item:focus-visible {
+      background: var(--primary-soft);
+      color: var(--primary);
+      outline: none;
+    }
+
+    .status {
+      min-height: 24px;
+      font-size: 0.92rem;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .status.error {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .status.loading {
+      color: var(--primary);
+      font-weight: 600;
     }
 
     #results {
-      border-top: 1px solid #e5e5e5;
-      margin-top: 1rem;
-      padding-top: 1rem;
+      margin-top: 24px;
+      padding: 24px;
     }
 
-    .error {
-      color: #9f1d1d;
-      font-weight: bold;
+    .result-placeholder,
+    .empty-state {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .results-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .result-item {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 18px;
+      background: var(--surface-muted);
+    }
+
+    .result-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 1rem;
+    }
+
+    .result-meta {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding-top: 20px;
+      }
+
+      .hero,
+      .card,
+      #results {
+        padding: 20px;
+        border-radius: 20px;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Adres opzoeken</h1>
-  <p>Kies één van de twee manieren om een adres te zoeken via PDOK Locatieserver.</p>
+  <main class="page">
+    <section class="hero">
+      <h1>Adres zoeken met PDOK</h1>
+      <p>Zoek direct op straat + plaats of met postcode en huisnummer. Beide formulieren starten automatisch zodra de invoer geldig is, zonder extra zoekknop.</p>
+    </section>
 
-  <form id="free-form">
-    <h2>Formulier 1: Vrij invoerveld</h2>
-    <div class="row">
-      <div>
-        <label for="free-query">Zoekopdracht</label>
-        <input id="free-query" name="free-query" type="text" required placeholder="Bijv. Dam 1 Amsterdam" />
-      </div>
-      <div style="align-self: end;">
-        <button type="submit">Zoek adres</button>
-      </div>
-    </div>
-  </form>
+    <section class="layout">
+      <article class="card">
+        <form id="free-form" novalidate>
+          <h2>Formulier 1: Vrij invoerveld</h2>
+          <p class="helper-text">Typ een adres en kies direct uit de suggesties. Zoeken start automatisch zodra je even stopt met typen of tekst plakt.</p>
 
-  <form id="postcode-form">
-    <h2>Formulier 2: Postcode + huisnummer</h2>
-    <div class="row">
-      <div>
-        <label for="postcode">Postcode</label>
-        <input id="postcode" name="postcode" type="text" inputmode="text" required placeholder="1234AB" />
-      </div>
-      <div>
-        <label for="house-number">Huisnummer</label>
-        <input id="house-number" name="house-number" type="text" inputmode="numeric" required placeholder="10" />
-      </div>
-      <div style="align-self: end;">
-        <button type="submit">Zoek adres</button>
-      </div>
-    </div>
-  </form>
+          <div class="stack">
+            <div class="field autocomplete">
+              <label for="free-query">Zoekopdracht</label>
+              <input id="free-query" name="free-query" type="text" autocomplete="off" placeholder="Bijv. Linge 91" aria-describedby="free-status" aria-autocomplete="list" aria-controls="free-suggestions" />
+              <p class="field-hint">Voorbeeld: straatnaam + huisnummer of volledig adres.</p>
+              <p id="free-status" class="status" role="status" aria-live="polite">Begin met typen om adressen te zoeken.</p>
+              <ul id="free-suggestions" class="autocomplete-list" hidden></ul>
+            </div>
+          </div>
+        </form>
+      </article>
 
-  <section id="results" aria-live="polite">
-    <h2>Resultaten</h2>
-    <div id="result-content">Nog geen zoekopdracht uitgevoerd.</div>
-  </section>
+      <article class="card">
+        <form id="postcode-form" novalidate>
+          <h2>Formulier 2: Postcode + huisnummer</h2>
+          <p class="helper-text">Zoeken start automatisch zodra postcode en huisnummer een geldige waarde hebben.</p>
+
+          <div class="stack">
+            <div class="row">
+              <div class="field">
+                <label for="postcode">Postcode</label>
+                <input id="postcode" name="postcode" type="text" inputmode="text" autocomplete="postal-code" placeholder="1234AB" maxlength="7" aria-describedby="postcode-status" />
+              </div>
+              <div class="field">
+                <label for="house-number">Huisnummer</label>
+                <input id="house-number" name="house-number" type="text" inputmode="numeric" autocomplete="off" placeholder="75" aria-describedby="postcode-status" />
+              </div>
+            </div>
+            <p id="postcode-status" class="status" role="status" aria-live="polite">Vul postcode en huisnummer in.</p>
+          </div>
+        </form>
+      </article>
+    </section>
+
+    <section id="results" aria-live="polite">
+      <h2>Resultaten</h2>
+      <div id="result-content">
+        <p class="result-placeholder">Nog geen zoekopdracht uitgevoerd.</p>
+      </div>
+    </section>
+  </main>
 
   <script>
-    const PDOK_BASE_URL = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/select";
-    const PDOK_ERROR_MESSAGE = "PDOK service gaf een fout terug.";
+    const PDOK_BASE_URL = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free";
     const resultContent = document.getElementById("result-content");
+    const freeQueryInput = document.getElementById("free-query");
+    const freeStatus = document.getElementById("free-status");
+    const freeSuggestions = document.getElementById("free-suggestions");
+    const postcodeInput = document.getElementById("postcode");
+    const houseNumberInput = document.getElementById("house-number");
+    const postcodeStatus = document.getElementById("postcode-status");
+
+    let freeSearchTimeout;
+    let postcodeSearchTimeout;
+    let lastFreeSearchToken = 0;
+    let lastPostcodeSearchToken = 0;
+
+    function setStatus(element, message, type = "") {
+      element.className = `status${type ? ` ${type}` : ""}`;
+      element.textContent = message;
+    }
+
+    function renderPlaceholder(message) {
+      resultContent.innerHTML = "";
+      const paragraph = document.createElement("p");
+      paragraph.className = "result-placeholder";
+      paragraph.textContent = message;
+      resultContent.appendChild(paragraph);
+    }
 
     function renderError(message) {
       resultContent.innerHTML = "";
       const paragraph = document.createElement("p");
-      paragraph.className = "error";
+      paragraph.className = "status error";
       paragraph.textContent = message;
       resultContent.appendChild(paragraph);
     }
 
     function renderResults(docs) {
+      resultContent.innerHTML = "";
+
       if (!docs || docs.length === 0) {
-        resultContent.innerHTML = "";
-        const paragraph = document.createElement("p");
-        paragraph.textContent = "Geen adressen gevonden.";
-        resultContent.appendChild(paragraph);
+        const emptyState = document.createElement("p");
+        emptyState.className = "empty-state";
+        emptyState.textContent = "Geen adressen gevonden.";
+        resultContent.appendChild(emptyState);
         return;
       }
 
-      const list = document.createElement("ol");
+      const list = document.createElement("ul");
+      list.className = "results-list";
 
       docs.forEach((doc) => {
         const item = document.createElement("li");
-        item.textContent = doc.weergavenaam || "Adres zonder naam";
+        item.className = "result-item";
+
+        const title = document.createElement("strong");
+        title.textContent = doc.weergavenaam || "Adres zonder naam";
+        item.appendChild(title);
+
+        const meta = [];
+        if (doc.straatnaam) meta.push(doc.straatnaam);
+        if (doc.huisnummer) meta.push(doc.huisnummer);
+        if (doc.postcode) meta.push(doc.postcode);
+        if (doc.woonplaatsnaam) meta.push(doc.woonplaatsnaam);
+
+        if (meta.length > 0) {
+          const details = document.createElement("div");
+          details.className = "result-meta";
+          details.textContent = meta.join(" · ");
+          item.appendChild(details);
+        }
+
         list.appendChild(item);
       });
 
-      resultContent.innerHTML = "";
       resultContent.appendChild(list);
+    }
+
+    function renderSuggestions(docs) {
+      freeSuggestions.innerHTML = "";
+
+      if (!docs || docs.length === 0) {
+        freeSuggestions.hidden = true;
+        return;
+      }
+
+      docs.forEach((doc) => {
+        const listItem = document.createElement("li");
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "autocomplete-item";
+        button.textContent = doc.weergavenaam || "Adres zonder naam";
+        button.addEventListener("click", () => {
+          freeQueryInput.value = doc.weergavenaam || "";
+          freeSuggestions.hidden = true;
+          renderResults([doc]);
+          setStatus(freeStatus, "Adres geselecteerd.");
+        });
+        listItem.appendChild(button);
+        freeSuggestions.appendChild(listItem);
+      });
+
+      freeSuggestions.hidden = false;
     }
 
     function normalizePostcode(value) {
@@ -143,69 +421,135 @@
       try {
         const response = await fetch(`${PDOK_BASE_URL}?${queryParams.toString()}`);
         if (!response.ok) {
-          renderError(PDOK_ERROR_MESSAGE);
-          return null;
+          throw new Error(`PDOK gaf status ${response.status}`);
         }
 
-        let data;
-        try {
-          data = await response.json();
-        } catch {
-          renderError("Ongeldig antwoord van PDOK Locatieserver.");
-          return null;
-        }
+        const data = await response.json();
         return data.response?.docs || [];
       } catch {
-        renderError("Kan PDOK Locatieserver niet bereiken.");
+        renderError("De PDOK service is tijdelijk niet bereikbaar of gaf een fout terug.");
         return null;
       }
     }
 
-    document.getElementById("free-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const query = document.getElementById("free-query").value.trim();
-      if (!query) {
-        renderError("Vul een zoekopdracht in.");
+    async function runFreeSearch() {
+      const query = freeQueryInput.value.trim();
+      const searchToken = ++lastFreeSearchToken;
+
+      if (query.length < 3) {
+        freeSuggestions.hidden = true;
+        if (!query) {
+          setStatus(freeStatus, "Begin met typen om adressen te zoeken.");
+          renderPlaceholder("Nog geen zoekopdracht uitgevoerd.");
+        } else {
+          setStatus(freeStatus, "Typ minimaal 3 tekens voor suggesties.");
+        }
         return;
       }
-      const params = new URLSearchParams({
-        q: query,
-        rows: "10",
-        fq: "type:adres"
-      });
+
+      setStatus(freeStatus, "Adressen zoeken...", "loading");
+      const params = new URLSearchParams({ q: query, rows: "8" });
+      params.append("fq", "type:(adres)");
 
       const docs = await searchPdok(params);
-      if (docs) {
-        renderResults(docs);
-      }
-    });
-
-    document.getElementById("postcode-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const postcode = normalizePostcode(document.getElementById("postcode").value);
-      const houseNumber = normalizeHouseNumber(document.getElementById("house-number").value);
-
-      if (!postcode || !houseNumber) {
-        renderError("Vul postcode en huisnummer in.");
+      if (searchToken !== lastFreeSearchToken || docs === null) {
         return;
       }
+
+      renderSuggestions(docs);
+      renderResults(docs);
+
+      if (docs.length === 0) {
+        setStatus(freeStatus, "Geen suggesties gevonden.");
+      } else {
+        setStatus(freeStatus, `${docs.length} suggestie${docs.length === 1 ? "" : "s"} gevonden.`);
+      }
+    }
+
+    async function runPostcodeSearch() {
+      const postcode = normalizePostcode(postcodeInput.value);
+      const houseNumber = normalizeHouseNumber(houseNumberInput.value);
+      const searchToken = ++lastPostcodeSearchToken;
+
+      postcodeInput.value = postcode;
+
+      if (!postcode && !houseNumber) {
+        setStatus(postcodeStatus, "Vul postcode en huisnummer in.");
+        return;
+      }
+
       if (!/^\d{4}[A-Z]{2}$/.test(postcode)) {
-        renderError("Gebruik een geldige postcode (1234AB).");
+        setStatus(postcodeStatus, "Gebruik een geldige postcode, bijvoorbeeld 1234AB.", "error");
         return;
       }
 
-      const params = new URLSearchParams({
-        q: "*:*",
-        rows: "10"
-      });
-      params.append("fq", "type:adres");
+      if (!/^\d+[a-zA-Z]?$/.test(houseNumber)) {
+        setStatus(postcodeStatus, "Gebruik een geldig huisnummer.", "error");
+        return;
+      }
+
+      setStatus(postcodeStatus, "Adres zoeken...", "loading");
+      const params = new URLSearchParams();
       params.append("fq", `postcode:${postcode}`);
       params.append("fq", `huisnummer:${houseNumber}`);
 
       const docs = await searchPdok(params);
-      if (docs) {
-        renderResults(docs);
+      if (searchToken !== lastPostcodeSearchToken || docs === null) {
+        return;
       }
+
+      renderResults(docs);
+      if (docs.length === 0) {
+        setStatus(postcodeStatus, "Geen adres gevonden voor deze combinatie.");
+      } else {
+        setStatus(postcodeStatus, `${docs.length} adres${docs.length === 1 ? "" : "sen"} gevonden.`);
+      }
+    }
+
+    function debounce(callback, delay, timerName) {
+      clearTimeout(timerName.value);
+      timerName.value = window.setTimeout(callback, delay);
+    }
+
+    const freeTimer = { value: null };
+    const postcodeTimer = { value: null };
+
+    freeQueryInput.addEventListener("input", () => {
+      debounce(runFreeSearch, 350, freeTimer);
+    });
+
+    freeQueryInput.addEventListener("paste", () => {
+      requestAnimationFrame(() => {
+        debounce(runFreeSearch, 0, freeTimer);
+      });
+    });
+
+    freeQueryInput.addEventListener("blur", () => {
+      window.setTimeout(() => {
+        freeSuggestions.hidden = true;
+      }, 150);
+    });
+
+    freeQueryInput.addEventListener("focus", () => {
+      if (freeSuggestions.children.length > 0) {
+        freeSuggestions.hidden = false;
+      }
+    });
+
+    postcodeInput.addEventListener("input", () => {
+      debounce(runPostcodeSearch, 250, postcodeTimer);
+    });
+
+    houseNumberInput.addEventListener("input", () => {
+      debounce(runPostcodeSearch, 250, postcodeTimer);
+    });
+
+    postcodeInput.addEventListener("paste", () => {
+      requestAnimationFrame(() => debounce(runPostcodeSearch, 0, postcodeTimer));
+    });
+
+    houseNumberInput.addEventListener("paste", () => {
+      requestAnimationFrame(() => debounce(runPostcodeSearch, 0, postcodeTimer));
     });
   </script>
 </body>
